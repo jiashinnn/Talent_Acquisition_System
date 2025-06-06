@@ -1,0 +1,40 @@
+<div class="container-fluid px-4">
+    <h1 class="mt-4">AI Resume Assistant</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="index.html">Dashboard</a></li>
+        <li class="breadcrumb-item active">AI Resume Assistant</li>
+    </ol>
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-robot me-1"></i>
+            AI Resume Assistant
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" role="alert">
+                <h5><i class="fas fa-info-circle me-2"></i>How to use this feature:</h5>
+                <p>The AI Resume Assistant can answer questions about all uploaded resumes. It provides instant insights about candidates, their skills, and experience. You can also ask it to help shortlist candidates based on specific criteria.</p>
+                <p><strong>Try asking:</strong></p>
+                <ul>
+                    <li>"Show me the top candidates for software engineer"</li>
+                    <li>"Who has experience with React and Node.js?"</li>
+                    <li>"Which candidates have the highest match scores?"</li>
+                    <li>"Tell me about [candidate name]'s skills"</li>
+                    <li>"Add candidate 1 to shortlist"</li>
+                </ul>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Chat messages will be added here dynamically -->
+                </div>
+                
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="userMessageInput" placeholder="Ask me about resumes and candidates..."></textarea>
+                    <button class="chat-send-button" id="sendMessageButton">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

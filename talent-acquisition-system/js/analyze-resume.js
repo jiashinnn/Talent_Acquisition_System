@@ -3,9 +3,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize event listeners
     initializeEventListeners();
     
-    // Load job positions for dropdown
-    loadJobPositions();
-    
     // Load available resumes
     loadAvailableResumes();
 });
@@ -173,11 +170,6 @@ function toggleSelectAllResumes(checked) {
 
 // Start the analysis process
 function startAnalysis() {
-    // Get selected position
-    const positionSelect = document.getElementById('positionSelect');
-    const positionId = positionSelect.value;
-    const positionText = positionSelect.options[positionSelect.selectedIndex].text;
-    
     // Get selected resumes
     const selectedResumeIds = [];
     const checkboxes = document.querySelectorAll('.resume-checkbox:checked');
@@ -192,17 +184,9 @@ function startAnalysis() {
         return;
     }
     
-    // Get job description for selected position
-    const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
-    const selectedJob = jobs.find(job => job.id === positionId);
-    
-    if (!selectedJob) {
-        showAlert('Could not find the selected job position.', 'danger');
-        return;
-    }
-    
-    // Get resumes
+    // Get resumes and jobs
     const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
     const selectedResumes = resumes.filter(resume => selectedResumeIds.includes(resume.id));
     
     // Check if all selected resumes have been OCR processed
@@ -230,12 +214,12 @@ function startAnalysis() {
     progressBar.style.width = '0%';
     progressBar.setAttribute('aria-valuenow', 0);
     
-    // Start real analysis process with backend
-    analyzeResumesWithBackend(selectedResumes, selectedJob, progressModal);
+    // Start analysis process
+    analyzeResumesWithPositions(selectedResumes, jobs, progressModal);
 }
 
-// Analyze resumes using the backend API
-async function analyzeResumesWithBackend(resumes, job, progressModal) {
+// Analyze resumes using their applied positions
+async function analyzeResumesWithPositions(resumes, jobs, progressModal) {
     const results = [];
     let processed = 0;
     
@@ -250,36 +234,57 @@ async function analyzeResumesWithBackend(resumes, job, progressModal) {
         progressText.textContent = `${processed} of ${resumes.length} resumes analyzed`;
     };
     
-    // Process each resume sequentially to avoid overwhelming the API
-    for (let i = 0; i < resumes.length; i++) {
-        const resume = resumes[i];
+    // For each resume, find its corresponding job and analyze
+    for (const resume of resumes) {
         try {
-            // Analyze resume with backend API
+            let job = null;
+            
+            // Find job by positionId if available
+            if (resume.positionId) {
+                job = jobs.find(j => j.id === resume.positionId);
+            }
+            
+            // If no job found by ID, try to find by position text
+            if (!job && resume.positionText) {
+                job = jobs.find(j => j.title.toLowerCase() === resume.positionText.toLowerCase());
+            }
+            
+            // If still no job found, create a generic one
+            if (!job) {
+                job = {
+                    id: 'default',
+                    title: resume.positionText || 'Unspecified Position',
+                    description: '',
+                    requirements: '',
+                    qualifications: [],
+                    responsibilities: [],
+                    skills: []
+                };
+            }
+            
+            // Analyze the resume against the job
             const result = await analyzeResumeWithBackend(resume, job);
             results.push(result);
         } catch (error) {
             console.error('Error analyzing resume:', error);
-            // Create fallback result with error
-            const fallbackResult = createFallbackResult(resume, job, error);
+            // Create fallback result
+            const fallbackResult = createFallbackResult(resume, null, error.message);
             results.push(fallbackResult);
         }
-            
-            // Update progress
-            processed++;
-            updateProgress();
+        
+        // Update progress
+        processed++;
+        updateProgress();
     }
-            
-                // Hide progress modal
-                    progressModal.hide();
-                    
-                    // Display results
-                    displayResults(results);
-                    
-                    // Save results to localStorage
-                    saveResults(results);
-                    
-                    // Show success message
-                    showAlert('Resume analysis completed successfully!', 'success');
+    
+    // Hide progress modal
+    progressModal.hide();
+    
+    // Display results
+    displayResults(results);
+    
+    // Save results
+    saveResults(results);
 }
 
 // Analyze a single resume with backend API
@@ -392,31 +397,27 @@ function determineStatus(score) {
     }
 }
 
-// Create fallback result when analysis fails
+// Create a fallback result when analysis fails
 function createFallbackResult(resume, job, error) {
-    console.warn('Creating fallback result due to error:', error.message);
-    
-    // Generate a score between 40-60 to indicate uncertainty
-    const score = 40 + Math.floor(Math.random() * 21);
+    const positionTitle = job ? job.title : (resume.positionText || 'Unspecified Position');
+    const positionId = job ? job.id : (resume.positionId || 'default');
     
     return {
         resumeId: resume.id,
+        resumeFileName: resume.fileName,
         candidateName: resume.candidateName,
         candidateEmail: resume.candidateEmail,
-        positionId: job.id,
-        positionTitle: job.title,
-        score: score,
+        positionId: positionId,
+        positionTitle: positionTitle,
+        score: 50, // Default score
         status: 'Pending',
         details: {
-            matchedSkills: [],
-            missingSkills: [],
-            entities: resume.entities || {},
-            explanation: `Could not analyze resume with backend API. Error: ${error.message}. Please try again later.`,
-            strengths: [],
-            weaknesses: []
+            keywordMatches: [],
+            missingKeywords: [],
+            explanation: `Analysis could not be completed. ${error}`,
+            recommendationLevel: 'Could not determine'
         },
-        analyzedDate: new Date().toISOString().split('T')[0],
-        error: error.message
+        timestamp: new Date().toISOString()
     };
 }
 

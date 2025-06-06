@@ -344,7 +344,7 @@ function processTextWithNER(text, resumeId) {
     });
 }
 
-// Fallback NER processing using regex
+// Improved fallback NER processing using regex
 function fallbackNERProcessing(text, resumeId) {
     setTimeout(() => {
         const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
@@ -373,12 +373,74 @@ function fallbackNERProcessing(text, resumeId) {
             nerResults.entityStats[label]++;
         };
 
-        // Find PERSON entities
-        const nameRegex = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g;
-        const possibleNames = text.match(nameRegex) || [];
-        possibleNames.slice(0, 3).forEach(name => {
-            addEntity(name, 'PERSON', 'People, including fictional');
-        });
+        // Known location patterns to avoid misidentifying as names
+        const knownLocations = [
+            "kuala lumpur", "singapore", "new york", "london", "tokyo", 
+            "beijing", "shanghai", "hong kong", "bangkok", "jakarta", 
+            "seoul", "taipei", "delhi", "mumbai", "sydney", "melbourne",
+            "paris", "berlin", "madrid", "rome", "amsterdam", "brussels",
+            "canada", "australia", "malaysia", "indonesia", "philippines",
+            "vietnam", "thailand", "china", "japan", "korea", "india",
+            "lorong", "jalan", "street", "avenue", "boulevard", "road", "lane",
+            "taman", "kg", "kampung", "ipoh", "penang", "johor", "melaka"
+        ];
+        
+        // Convert to regex pattern for case-insensitive matching
+        const locationPattern = new RegExp('\\b(' + knownLocations.join('|') + ')\\b', 'i');
+
+        // Find PERSON entities - improved pattern to better match names
+        // Improved regex for capturing proper names with 2-3 words
+        const nameRegex = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})(?!\s+(?:road|street|avenue|boulevard|lane|jalan|lorong))/g;
+        const possibleNames = [];
+        
+        // Extract all potential name matches
+        let nameMatch;
+        while ((nameMatch = nameRegex.exec(text)) !== null) {
+            const name = nameMatch[0].trim();
+            
+            // Skip if it's a known location
+            if (!locationPattern.test(name.toLowerCase())) {
+                possibleNames.push(name);
+            }
+        }
+
+        // Use the filename to help identify which name is likely correct
+        const fileName = resumes[resumeIndex].fileName;
+        const fileNameParts = fileName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ').toLowerCase();
+        
+        // Try to find a matching name in the text based on the filename
+        let bestNameMatch = null;
+        
+        if (possibleNames.length > 0) {
+            // First try to find a name that appears in the filename
+            for (const name of possibleNames) {
+                const nameLower = name.toLowerCase();
+                if (fileNameParts.includes(nameLower) || 
+                    nameLower.split(' ').some(part => fileNameParts.includes(part))) {
+                    bestNameMatch = name;
+                    break;
+                }
+            }
+            
+            // If no match found, use the first name in the document
+            if (!bestNameMatch) {
+                bestNameMatch = possibleNames[0];
+            }
+            
+            addEntity(bestNameMatch, 'PERSON', 'People, including fictional');
+        }
+        
+        // If no names found yet, try another approach for Asian names that might not follow Western capitalization
+        if (possibleNames.length === 0) {
+            // Look for patterns like "Name: John Doe" or "Full Name: Jane Smith"
+            const labeledNameMatch = text.match(/(?:name|full name|candidate)[\s:]+([\w\s]+)/i);
+            if (labeledNameMatch && labeledNameMatch[1]) {
+                const labeledName = labeledNameMatch[1].trim();
+                if (labeledName.length > 3 && !locationPattern.test(labeledName.toLowerCase())) {
+                    addEntity(labeledName, 'PERSON', 'People, identified by label');
+                }
+            }
+        }
 
         // Find EMAIL entities
         const emailRegex = /[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/g;
@@ -388,7 +450,7 @@ function fallbackNERProcessing(text, resumeId) {
         });
 
         // Find ORG entities
-        const orgRegex = /\b([A-Z]{2,}(?:\s+[A-Z]{2,})*)\b/g;
+        const orgRegex = /\b([A-Z][a-z]*(?:\s+[A-Z][a-z]*)*(?:\s+(?:Inc|LLC|Ltd|Co|Corp|Corporation|Company|Technologies|Solutions|Systems|Group|International|Enterprises)))\b/g;
         const possibleOrgs = text.match(orgRegex) || [];
         possibleOrgs.slice(0, 5).forEach(org => {
             addEntity(org, 'ORG', 'Companies, agencies, institutions, etc.');
@@ -401,10 +463,21 @@ function fallbackNERProcessing(text, resumeId) {
             addEntity(date, 'DATE', 'Absolute or relative dates or periods');
         });
         
-        // Find GPE (cities, countries, states) entities - simplified list
-        const locationRegex = /\b(?:New York|Los Angeles|Chicago|Houston|London|Paris|Tokyo|Beijing|Sydney|Toronto|Mexico City|Berlin|Rome|Moscow|Dubai|Singapore|Hong Kong|San Francisco|Boston|Seattle|Miami|United States|Canada|UK|France|Germany|Japan|China|India|Australia|Brazil|Italy|Spain|Russia)\b/gi;
-        const locations = text.match(locationRegex) || [];
-        locations.forEach(location => {
+        // Find GPE (cities, countries, states) entities
+        const locations = [];
+        for (const location of knownLocations) {
+            const locationRegex = new RegExp('\\b' + location + '\\b', 'i');
+            if (locationRegex.test(text)) {
+                // Capitalize location properly
+                const properLocation = location.split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+                locations.push(properLocation);
+            }
+        }
+        
+        // Add unique locations only
+        [...new Set(locations)].slice(0, 5).forEach(location => {
             addEntity(location, 'GPE', 'Countries, cities, states');
         });
         
@@ -437,9 +510,12 @@ function finalizeResumeProcessing(resumeId, nerResults, message = '') {
             // Extract person names
             const personEntities = nerResults.entities.filter(e => e.label === 'PERSON');
             if (personEntities.length > 0) {
-                            // Just use the first person entity found
-            const bestPerson = personEntities[0];
+                // Just use the first person entity found
+                const bestPerson = personEntities[0];
                 resume.candidateName = bestPerson.text;
+            } else {
+                // If no person entity found, try to extract from filename
+                resume.candidateName = extractNameFromFileName(resume.fileName);
             }
 
             // Extract email
@@ -465,6 +541,23 @@ function finalizeResumeProcessing(resumeId, nerResults, message = '') {
             if (dateEntities.length > 0) {
                 resume.dates = dateEntities.map(e => e.text);
             }
+            
+            // Validate that candidate name is not a location
+            if (resume.candidateName && resume.locations && resume.locations.length > 0) {
+                const lowerName = resume.candidateName.toLowerCase();
+                const isLocation = resume.locations.some(loc => 
+                    lowerName.includes(loc.toLowerCase()) || 
+                    loc.toLowerCase().includes(lowerName)
+                );
+                
+                if (isLocation) {
+                    // Name is likely a location, extract from filename instead
+                    resume.candidateName = extractNameFromFileName(resume.fileName);
+                }
+            }
+        } else {
+            // If no entities found at all, extract name from filename
+            resume.candidateName = extractNameFromFileName(resume.fileName);
         }
 
         localStorage.setItem('resumes', JSON.stringify(resumes));
@@ -480,6 +573,49 @@ function finalizeResumeProcessing(resumeId, nerResults, message = '') {
         showAlert(notification, 'info');
         addRecentActivity(`NER processing completed for "${resume.fileName}" - ${resume.candidateName}`);
     }
+}
+
+// Improved function to extract name from filename
+function extractNameFromFileName(fileName) {
+    // Remove file extension
+    let nameBase = fileName.replace(/\.[^/.]+$/, "");
+    
+    // Replace underscores and hyphens with spaces
+    nameBase = nameBase.replace(/[_-]/g, " ");
+    
+    // Remove common prefixes
+    const prefixes = [
+        'resume', 'cv', 'curriculum vitae', 'application', 
+        'document', 'candidate', 'job application'
+    ];
+    
+    for (const prefix of prefixes) {
+        // Remove prefix followed by space, underscore, or dash
+        const prefixRegex = new RegExp(`^${prefix}[\\s_-]*`, 'i');
+        nameBase = nameBase.replace(prefixRegex, '');
+        
+        // Also remove prefix if it's at the end
+        const suffixRegex = new RegExp(`[\\s_-]*${prefix}$`, 'i');
+        nameBase = nameBase.replace(suffixRegex, '');
+    }
+    
+    // Capitalize each word
+    nameBase = nameBase.split(" ")
+        .filter(word => word.trim() !== '') // Remove empty parts
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
+    
+    // If still empty or just whitespace, use a generic name
+    if (!nameBase.trim()) {
+        return "Candidate";
+    }
+    
+    return nameBase.trim();
+}
+
+// Replace the old function with the improved one
+function generateNameFromFileName(fileName) {
+    return extractNameFromFileName(fileName);
 }
 
 function updateResumeStatus(resumeId, status) {
@@ -524,14 +660,25 @@ function simulateOcrProcessing(resumeId) {
         updateResumeRow(resumes[resumeIndex]);
         showAlert(`OCR processing completed for "${fileName}". Candidate information extracted.`, 'info');
         addRecentActivity(`OCR processing completed for "${fileName}" - Extracted candidate: ${candidateName}`);
+        
+        // Since OCR is complete, try to extract candidate info
+        extractCandidateInfo(resumeId);
     }
 }
 
-function generateNameFromFileName(fileName) {
-    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
-    let name = nameWithoutExt.replace(/[_-]/g, ' ');
-    name = name.replace(/\b\w/g, l => l.toUpperCase());
-    return name;
+// Add new function to extract candidate info
+function extractCandidateInfo(resumeId) {
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    const resumeIndex = resumes.findIndex(r => r.id === resumeId);
+    
+    if (resumeIndex !== -1 && resumes[resumeIndex].extractedText) {
+        // Ensure the resume is marked as having OCR processed
+        resumes[resumeIndex].ocrProcessed = true;
+        localStorage.setItem('resumes', JSON.stringify(resumes));
+        
+        // Process with NER if we have extracted text
+        processTextWithNER(resumes[resumeIndex].extractedText, resumeId);
+    }
 }
 
 function generateEmailFromName(name) {
