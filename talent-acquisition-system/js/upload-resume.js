@@ -81,6 +81,27 @@ function loadJobPositions() {
     }
 }
 
+// Function to generate sequential resume filename
+function generateSequentialResumeName(fileExtension) {
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    
+    // Find the highest number in existing resume_X filenames
+    let maxNumber = 0;
+    resumes.forEach(resume => {
+        const match = resume.fileName.match(/^resume_(\d+)\./i);
+        if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNumber) {
+                maxNumber = num;
+            }
+        }
+    });
+    
+    // Generate the next number in sequence
+    const nextNumber = maxNumber + 1;
+    return `resume_${nextNumber}${fileExtension}`;
+}
+
 function uploadResume() {
     const positionApplied = document.getElementById('positionApplied');
     const positionId = positionApplied.value || '';
@@ -99,13 +120,19 @@ function uploadResume() {
     
     const resumeId = 'RESUME-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     
+    // Generate sequential filename
+    const fileExtension = resumeFile.name.substring(resumeFile.name.lastIndexOf('.'));
+    const sequentialFileName = generateSequentialResumeName(fileExtension);
+    
+    // Store both original filename and sequential filename
     const resume = {
         id: resumeId,
         candidateName: 'Pending OCR',
         candidateEmail: 'pending@ocr-processing.com',
         positionId: positionId,
         positionText: positionText,
-        fileName: resumeFile.name,
+        originalFileName: resumeFile.name, // Store original filename
+        fileName: sequentialFileName, // Use sequential filename
         fileSize: resumeFile.size,
         fileType: resumeFile.type,
         uploadDate: new Date().toISOString().split('T')[0],
@@ -118,8 +145,8 @@ function uploadResume() {
     saveResume(resume);
     addResumeToTable(resume);
     document.getElementById('uploadResumeForm').reset();
-    showAlert('Resume uploaded successfully! OCR processing started.', 'success');
-    addRecentActivity(`Resume "${resumeFile.name}" uploaded for processing`);
+    showAlert(`Resume uploaded successfully as "${sequentialFileName}"! OCR processing started.`, 'success');
+    addRecentActivity(`Resume "${resumeFile.name}" uploaded as "${sequentialFileName}" for processing`);
     processResumeWithOCR(resumeFile, resumeId);
 }
 
@@ -152,13 +179,18 @@ function bulkUploadResumes() {
         
         const resumeId = 'RESUME-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0') + '-' + i;
         
+        // Generate sequential filename
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.'));
+        const sequentialFileName = generateSequentialResumeName(fileExtension);
+        
         const resume = {
             id: resumeId,
             candidateName: 'Pending OCR',
             candidateEmail: 'pending@ocr-processing.com',
             positionId: positionId,
             positionText: positionText,
-            fileName: file.name,
+            originalFileName: file.name, // Store original filename
+            fileName: sequentialFileName, // Use sequential filename
             fileSize: file.size,
             fileType: file.type,
             uploadDate: new Date().toISOString().split('T')[0],
@@ -232,6 +264,9 @@ function processOCRResults(ocrData, resumeId, fileName) {
         let candidateName = '';
         let candidateEmail = '';
 
+        // Get original filename if available
+        const nameSource = resumes[resumeIndex].originalFileName || fileName;
+
         if (ocrData && ocrData.ParsedResults && ocrData.ParsedResults.length > 0) {
             extractedText = ocrData.ParsedResults[0].ParsedText || '';
 
@@ -250,11 +285,11 @@ function processOCRResults(ocrData, resumeId, fileName) {
                     candidateEmail = generateEmailFromName(candidateName);
                 }
             } else {
-                candidateName = generateNameFromFileName(fileName);
+                candidateName = generateNameFromFileName(nameSource);
                 candidateEmail = generateEmailFromName(candidateName);
             }
         } else {
-            candidateName = generateNameFromFileName(fileName);
+            candidateName = generateNameFromFileName(nameSource);
             candidateEmail = generateEmailFromName(candidateName);
         }
 
@@ -268,7 +303,7 @@ function processOCRResults(ocrData, resumeId, fileName) {
 
         localStorage.setItem('resumes', JSON.stringify(resumes));
         updateResumeRow(resumes[resumeIndex]);
-        showAlert(`OCR processing completed for "${fileName}". Now performing NER analysis...`, 'info');
+        showAlert(`OCR processing completed for "${resumes[resumeIndex].fileName}". Now performing NER analysis...`, 'info');
 
         if (extractedText) {
             processTextWithNER(extractedText, resumeId);
@@ -640,7 +675,9 @@ function simulateOcrProcessing(resumeId) {
     
     if (resumeIndex !== -1) {
         const fileName = resumes[resumeIndex].fileName;
-        const candidateName = generateNameFromFileName(fileName);
+        // Use original filename for candidate name generation if available
+        const nameSource = resumes[resumeIndex].originalFileName || fileName;
+        const candidateName = generateNameFromFileName(nameSource);
         const candidateEmail = generateEmailFromName(candidateName);
         
         resumes[resumeIndex].candidateName = candidateName;
@@ -816,152 +853,148 @@ function setupResumeButtons(row) {
 
 function viewResume(resumeId) {
     const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
-    const resume = resumes.find(resume => resume.id === resumeId);
+    const resume = resumes.find(r => r.id === resumeId);
     
     if (resume) {
-        document.getElementById('viewResumeModalLabel').textContent = resume.ocrProcessed ? 
-            `Resume: ${resume.candidateName}` : 
-            `Resume: ${resume.fileName}`;
-        
+        const modalTitle = document.getElementById('viewResumeModalLabel');
         const resumeDetails = document.getElementById('resumeDetails');
         
-        if (resume.ocrProcessed) {
-            resumeDetails.innerHTML = `
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <p><strong>Candidate Name:</strong> ${resume.candidateName}</p>
-                        <p><strong>Email:</strong> ${resume.candidateEmail}</p>
-                        <p><strong>Position Applied:</strong> ${resume.positionText}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Upload Date:</strong> ${resume.uploadDate}</p>
-                        <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(resume.status)}">${resume.status}</span></p>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <h6>File Information</h6>
-                    <p><strong>File Name:</strong> ${resume.fileName}</p>
-                    <p><strong>File Type:</strong> ${resume.fileType}</p>
-                    <p><strong>File Size:</strong> ${formatFileSize(resume.fileSize)}</p>
-                </div>
-            `;
-            
-            if (resume.extractedText) {
-                resumeDetails.innerHTML += `
-                    <div class="mb-3">
-                        <h6>Extracted Text</h6>
-                        <div class="border p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                            <div class="extracted-text" style="white-space: pre-wrap;">${resume.extractedText}</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Add NER entities if available
-            if (resume.nerResults && resume.nerResults.entities && resume.nerResults.entities.length > 0) {
-                // Add entity summary by category
-                let entitySummaryHtml = '';
-                
-                // Add organizations if available
-                if (resume.organizations && resume.organizations.length > 0) {
-                    entitySummaryHtml += `
-                        <div class="mb-2">
-                            <strong>Organizations:</strong> ${resume.organizations.join(', ')}
-                        </div>
-                    `;
-                }
-                
-                // Add locations if available
-                if (resume.locations && resume.locations.length > 0) {
-                    entitySummaryHtml += `
-                        <div class="mb-2">
-                            <strong>Locations:</strong> ${resume.locations.join(', ')}
-                        </div>
-                    `;
-                }
-                
-                // Add dates if available
-                if (resume.dates && resume.dates.length > 0) {
-                    entitySummaryHtml += `
-                        <div class="mb-2">
-                            <strong>Dates:</strong> ${resume.dates.join(', ')}
-                        </div>
-                    `;
-                }
-                
-                // Add entity statistics if available
-                let entityStatsHtml = '';
-                if (resume.nerResults.entityStats && Object.keys(resume.nerResults.entityStats).length > 0) {
-                    entityStatsHtml += '<div class="mb-2"><strong>Entity Types Found:</strong> ';
-                    entityStatsHtml += Object.entries(resume.nerResults.entityStats)
-                        .map(([type, count]) => `${type} (${count})`)
-                        .join(', ');
-                    entityStatsHtml += '</div>';
-                }
-                
-                // Add the processed method info
-                let processMethod = '';
-                if (resume.nerResults.usedFallback) {
-                    processMethod = '<span class="badge bg-warning">Regex Fallback</span>';
-                } else if (resume.nerResults.modelInfo) {
-                    processMethod = `<span class="badge bg-success">spaCy ${resume.nerResults.modelInfo.version || ''}</span>`;
-                    if (resume.nerResults.modelInfo.modelName) {
-                        processMethod += ` <small class="text-muted">(${resume.nerResults.modelInfo.modelName})</small>`;
-                    }
-                } else {
-                    processMethod = '<span class="badge bg-success">spaCy NLP</span>';
-                }
-                
-                resumeDetails.innerHTML += `
-                    <div class="mb-3">
-                        <h6>Named Entity Recognition ${processMethod}</h6>
-                        ${entitySummaryHtml || entityStatsHtml ? `<div class="card mb-3"><div class="card-body">${entitySummaryHtml}${entityStatsHtml}</div></div>` : ''}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Entity</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${resume.nerResults.entities.map(entity => `
-                                        <tr>
-                                            <td>${entity.text}</td>
-                                            <td><span class="badge bg-${getEntityBadgeColor(entity.label)}">${entity.label}</span> ${entity.description ? `<small class="text-muted">${entity.description}</small>` : ''}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            resumeDetails.innerHTML += `
-                <div class="mb-3">
-                    <h6>Analysis Status</h6>
-                    <p>${resume.analyzed ? 'This resume has been analyzed.' : 'This resume has not been analyzed yet.'}</p>
-                </div>
-            `;
-        } else {
-            resumeDetails.innerHTML = `
-                <div class="text-center text-muted mb-4">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p><i class="bi bi-info-circle me-1"></i> OCR processing in progress. Candidate details will be available soon.</p>
-                </div>
-                <div class="mb-3">
-                    <h6>File Information</h6>
-                    <p><strong>File Name:</strong> ${resume.fileName}</p>
-                    <p><strong>File Type:</strong> ${resume.fileType}</p>
-                    <p><strong>File Size:</strong> ${formatFileSize(resume.fileSize)}</p>
+        modalTitle.textContent = `Resume: ${resume.candidateName}`;
+        
+        let statusClass = getStatusBadgeClass(resume.status);
+        
+        let fileInfo = `<p><strong>File:</strong> ${resume.fileName}`;
+        // Add original filename if it exists and is different
+        if (resume.originalFileName && resume.originalFileName !== resume.fileName) {
+            fileInfo += ` <small class="text-muted">(Original: ${resume.originalFileName})</small>`;
+        }
+        fileInfo += `</p>`;
+        
+        let detailsHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Candidate Information</h5>
+                    <p><strong>Name:</strong> ${resume.candidateName}</p>
+                    <p><strong>Email:</strong> ${resume.candidateEmail || 'Not available'}</p>
+                    ${fileInfo}
                     <p><strong>Upload Date:</strong> ${resume.uploadDate}</p>
-                    <p><strong>Position Applied:</strong> ${resume.positionText}</p>
+                    <p><strong>Position Applied:</strong> ${resume.positionText || 'Unspecified'}</p>
+                    <p><strong>Status:</strong> <span class="badge ${statusClass}">${resume.status}</span></p>
+                </div>
+                <div class="col-md-6">
+                    <h5>Processing Information</h5>
+                    <p><strong>OCR Processed:</strong> ${resume.ocrProcessed ? 'Yes' : 'No'}</p>
+                    <p><strong>Analysis Status:</strong> ${resume.analyzed ? 'Completed' : 'Pending'}</p>
+                    <p><strong>Notes:</strong> ${resume.additionalNotes || 'None'}</p>
+                </div>
+            </div>
+        `;
+        
+        // If we have extracted text, show it
+        if (resume.extractedText) {
+            detailsHTML += `
+                <div class="mt-4">
+                    <h5>Extracted Content</h5>
+                    <div class="card">
+                        <div class="card-body bg-light">
+                            <pre class="mb-0" style="white-space: pre-wrap;">${resume.extractedText}</pre>
+                        </div>
+                    </div>
                 </div>
             `;
         }
+        
+        // If we have NER results, show them
+        if (resume.nerResults && resume.nerResults.entities && resume.nerResults.entities.length > 0) {
+            detailsHTML += `
+                <div class="mt-4">
+                    <h5>Identified Entities</h5>
+                    <div class="entity-tags mb-3">
+            `;
+            
+            // Group entities by type
+            const entityGroups = {};
+            resume.nerResults.entities.forEach(entity => {
+                if (!entityGroups[entity.label]) {
+                    entityGroups[entity.label] = [];
+                }
+                entityGroups[entity.label].push(entity);
+            });
+            
+            // Display entities by group
+            Object.keys(entityGroups).forEach(label => {
+                const badgeClass = getEntityBadgeColor(label);
+                detailsHTML += `<div class="mb-2"><strong>${label}:</strong> `;
+                
+                // Determine if we need text-dark class based on the badge color
+                const textClass = needsDarkText(badgeClass) ? ' text-dark' : '';
+                
+                entityGroups[label].forEach(entity => {
+                    detailsHTML += `<span class="badge bg-${badgeClass}${textClass} me-1" title="${entity.description || ''}">${entity.text}</span>`;
+                });
+                
+                detailsHTML += `</div>`;
+            });
+            
+            detailsHTML += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        resumeDetails.innerHTML = detailsHTML;
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('viewResumeModal'));
+        modal.show();
+    } else {
+        showAlert('Resume not found.', 'danger');
+    }
+}
+
+// Helper function to determine if a badge needs dark text based on its background color
+function needsDarkText(badgeClass) {
+    // Colors that need dark text for better contrast
+    const needsDark = ['light', 'warning', 'info'];
+    return needsDark.includes(badgeClass);
+}
+
+// Get color for entity badge
+function getEntityBadgeColor(entityType) {
+    switch (entityType) {
+        case 'PERSON':
+            return 'primary';
+        case 'EMAIL':
+            return 'info';
+        case 'ORG':
+            return 'secondary';
+        case 'GPE':
+        case 'LOC':
+            return 'success';
+        case 'DATE':
+        case 'TIME':
+            return 'warning';
+        case 'MONEY':
+            return 'danger';
+        case 'PRODUCT':
+            return 'info';
+        case 'EVENT':
+            return 'dark';
+        case 'WORK_OF_ART':
+            return 'info';
+        case 'LANGUAGE':
+            return 'primary';
+        case 'LAW':
+            return 'secondary';
+        case 'NORP': // Nationalities, religious or political groups
+            return 'danger';
+        case 'QUANTITY':
+        case 'CARDINAL':
+        case 'ORDINAL':
+        case 'PERCENT':
+            return 'dark';
+        default:
+            return 'light';
     }
 }
 
@@ -1008,45 +1041,6 @@ function getStatusBadgeClass(status) {
             return 'bg-info';
         default:
             return 'bg-warning';
-    }
-}
-
-// Get color for entity badge
-function getEntityBadgeColor(entityType) {
-    switch (entityType) {
-        case 'PERSON':
-            return 'primary';
-        case 'EMAIL':
-            return 'info';
-        case 'ORG':
-            return 'secondary';
-        case 'GPE':
-        case 'LOC':
-            return 'success';
-        case 'DATE':
-        case 'TIME':
-            return 'warning';
-        case 'MONEY':
-            return 'danger';
-        case 'PRODUCT':
-            return 'info';
-        case 'EVENT':
-            return 'dark';
-        case 'WORK_OF_ART':
-            return 'info';
-        case 'LANGUAGE':
-            return 'primary';
-        case 'LAW':
-            return 'secondary';
-        case 'NORP': // Nationalities, religious or political groups
-            return 'danger';
-        case 'QUANTITY':
-        case 'CARDINAL':
-        case 'ORDINAL':
-        case 'PERCENT':
-            return 'dark';
-        default:
-            return 'light';
     }
 }
 

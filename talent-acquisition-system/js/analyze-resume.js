@@ -93,6 +93,8 @@ function loadJobPositions() {
 // Load available resumes from localStorage
 function loadAvailableResumes() {
     const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
+    console.log('Analysis results loaded:', analysisResults); // Debug line
     const tableBody = document.querySelector('#resumeSelectionTable tbody');
     
     // Clear existing data
@@ -126,8 +128,8 @@ function loadAvailableResumes() {
         }
         
         // Get analysis info if available
-        const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
         const analysis = analysisResults.find(a => a.resumeId === resume.id);
+        console.log(`Resume ${resume.id}, analysis:`, analysis); // Debug line
         
         // Analysis score and summary
         const scoreHtml = analysis ? 
@@ -543,7 +545,26 @@ function displayResults(results) {
 
 // Save analysis results to localStorage
 function saveResults(results) {
-    localStorage.setItem('analysisResults', JSON.stringify(results));
+    // Get existing results
+    const existingResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
+    
+    // For each new result, update or add it
+    results.forEach(newResult => {
+        const existingIndex = existingResults.findIndex(r => r.resumeId === newResult.resumeId);
+        if (existingIndex !== -1) {
+            // Update existing result
+            existingResults[existingIndex] = newResult;
+        } else {
+            // Add new result
+            existingResults.push(newResult);
+        }
+    });
+    
+    // Save updated results back to localStorage
+    localStorage.setItem('analysisResults', JSON.stringify(existingResults));
+    
+    // Refresh the available resumes display to show updated scores
+    loadAvailableResumes();
 }
 
 // Show result details in modal

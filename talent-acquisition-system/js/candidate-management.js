@@ -72,11 +72,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
         const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
         
+        console.log('Analysis results loaded:', analysisResults);
+        
         // Filter and combine data
         const candidates = [];
         
+        // First approach: Add candidates based on analyzed flag in resumes
         resumes.forEach(resume => {
-            // Only include analyzed resumes
+            // Check if this resume has been analyzed
             if (resume.analyzed) {
                 // Find analysis result for this resume
                 const analysis = analysisResults.find(a => a.resumeId === resume.id);
@@ -102,6 +105,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
+        // Second approach: Add candidates based on analysis results
+        // This ensures we don't miss any analyzed resumes
+        analysisResults.forEach(analysis => {
+            // Check if we already added this candidate based on the resume
+            const alreadyAdded = candidates.some(c => c.resumeId === analysis.resumeId);
+            
+            // If not already added, add it now
+            if (!alreadyAdded) {
+                // Get the resume data
+                const resume = resumes.find(r => r.id === analysis.resumeId);
+                
+                if (resume) {
+                    // Update the resume to mark it as analyzed
+                    if (!resume.analyzed) {
+                        resume.analyzed = true;
+                        
+                        // Update in localStorage
+                        const resumeIndex = resumes.findIndex(r => r.id === analysis.resumeId);
+                        if (resumeIndex !== -1) {
+                            resumes[resumeIndex].analyzed = true;
+                            localStorage.setItem('resumes', JSON.stringify(resumes));
+                        }
+                    }
+                    
+                    // Create the candidate object
+                    const candidate = {
+                        resumeId: resume.id,
+                        name: resume.candidateName,
+                        position: analysis.positionTitle || resume.positionText || 'Unspecified',
+                        positionId: analysis.positionId,
+                        score: analysis.score,
+                        status: resume.status || 'Pending', // Default to Pending if no status
+                        email: resume.candidateEmail,
+                        phone: resume.phone || 'Not provided',
+                        date: analysis.analyzedDate || 'Unknown',
+                        details: analysis.details,
+                        fileName: resume.fileName,
+                        uploadDate: resume.uploadDate,
+                        extractedText: resume.extractedText || resume.ocrText
+                    };
+                    
+                    candidates.push(candidate);
+                }
+            }
+        });
+        
+        console.log('Found candidates:', candidates);
         
         // Apply filters
         let filteredCandidates = candidates;
