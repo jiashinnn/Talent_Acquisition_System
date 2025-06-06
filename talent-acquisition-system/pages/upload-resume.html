@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Resume - Talent Acquisition System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">Talent Acquisition</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../index.html">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="analyze-resume.html">
+                                <i class="bi bi-search me-2"></i>
+                                Analyze Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="upload-resume.html">
+                                <i class="bi bi-upload me-2"></i>
+                                Upload Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="job-description.html">
+                                <i class="bi bi-briefcase me-2"></i>
+                                Job Description
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Upload Resume</h1>
+                </div>
+
+                <!-- Upload Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Upload Candidate Resume</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadResumeForm">
+                            <div class="mb-4">
+                                <label for="resumeFile" class="form-label">Resume File (PDF or Word)</label>
+                                <input type="file" class="form-control" id="resumeFile" accept=".pdf,.doc,.docx" required>
+                                <div class="form-text">Supported formats: PDF, DOC, DOCX. Maximum file size: 5MB</div>
+                                <div class="form-text text-info">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Our OCR system powered by OCR.space will automatically extract text from the resume, and our spaCy NER model will identify and analyze entities.
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="positionApplied" class="form-label">Position Applied For (Optional)</label>
+                                <select class="form-select" id="positionApplied">
+                                    <option value="" selected disabled>Select position</option>
+                                    <!-- This will be populated from job descriptions -->
+                                </select>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-upload me-2"></i>Upload Resume
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="bulkUploadBtn" data-bs-toggle="modal" data-bs-target="#bulkUploadModal">
+                                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Bulk Upload
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Uploaded Resumes Table -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Uploaded Resumes</h5>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" placeholder="Search resumes..." id="resumeSearchInput">
+                            <button class="btn btn-outline-secondary" type="button" id="resumeSearchButton">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="resumesTable">
+                                <thead>
+                                    <tr>
+                                        <th>File Name</th>
+                                        <th>Position</th>
+                                        <th>Upload Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" class="text-center">No resumes uploaded yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bulk Upload Modal -->
+    <div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkUploadModalLabel">Bulk Resume Upload</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="bulkUploadForm">
+                        <div class="mb-3">
+                            <label for="bulkPositionApplied" class="form-label">Position Applied For (Optional)</label>
+                            <select class="form-select" id="bulkPositionApplied">
+                                <option value="" selected disabled>Select position</option>
+                                <!-- This will be populated from job descriptions -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bulkResumeFiles" class="form-label">Resume Files (PDF or Word)</label>
+                            <input type="file" class="form-control" id="bulkResumeFiles" accept=".pdf,.doc,.docx" multiple required>
+                            <div class="form-text">You can select multiple files. Maximum 10 files at once.</div>
+                            <div class="form-text text-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Our OCR system powered by OCR.space will extract text from each resume, and our spaCy NER model will identify and analyze entities.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmBulkUpload">Upload Files</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Resume Modal -->
+    <div class="modal fade" id="viewResumeModal" tabindex="-1" aria-labelledby="viewResumeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewResumeModalLabel">Resume Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="resumeDetails">
+                    <!-- Resume details will be loaded here -->
+                    <div class="text-center text-muted mb-3">
+                        <p><i class="bi bi-info-circle me-1"></i> Candidate details will be available after OCR processing</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="downloadResume">Download Resume</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/upload-resume.js"></script>
+</body>
+</html>

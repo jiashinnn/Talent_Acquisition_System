@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze Resume - Talent Acquisition System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">Talent Acquisition</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../index.html">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="analyze-resume.html">
+                                <i class="bi bi-search me-2"></i>
+                                Analyze Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="upload-resume.html">
+                                <i class="bi bi-upload me-2"></i>
+                                Upload Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="job-description.html">
+                                <i class="bi bi-briefcase me-2"></i>
+                                Job Description
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Resume Analysis</h1>
+                </div>
+
+                <!-- Analysis Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Select Resumes to Analyze</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="analyzeForm">
+                            <div class="mb-3">
+                                <label for="positionSelect" class="form-label">Select Position</label>
+                                <select class="form-select" id="positionSelect" required>
+                                    <option value="" selected disabled>Choose a position...</option>
+                                    <!-- Will be populated from job descriptions -->
+                                </select>
+                                <div class="form-text">Select the position to match resumes against</div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">Available Resumes</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAllResumes">
+                                        <label class="form-check-label" for="selectAllResumes">
+                                            Select All
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="resumeSelectionTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px;"></th>
+                                                <th>File Name</th>
+                                                <th>Position Applied</th>
+                                                <th>Upload Date</th>
+                                                <th>OCR Status</th>
+                                                <th>Analysis Score</th>
+                                                <th>Analysis Summary</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="7" class="text-center">No resumes available for analysis. Please upload resumes first.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="startAnalysisBtn">
+                                <i class="bi bi-search me-2"></i>Start Analysis
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Analysis Results -->
+                <div class="card" id="analysisResultsCard" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Analysis Results</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" id="exportResultsBtn">
+                                <i class="bi bi-download me-2"></i>Export Results
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="analysisResultsTable">
+                                <thead>
+                                    <tr>
+                                        <th>File Name</th>
+                                        <th>Match Score</th>
+                                        <th>Missing Keywords</th>
+                                        <th>Summary</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Results will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Analysis Progress Modal -->
+    <div class="modal fade" id="analysisProgressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="analysisProgressModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="analysisProgressModalLabel">Analyzing Resumes</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Processing resumes. This may take a few moments...</p>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                    </div>
+                    <p class="mt-2 text-center" id="progressText">0 of 0 resumes analyzed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Detail Modal -->
+    <div class="modal fade" id="resultDetailModal" tabindex="-1" aria-labelledby="resultDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resultDetailModalLabel">Analysis Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="resultDetailContent">
+                    <!-- Analysis details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="contactCandidateBtn">Contact Candidate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Candidate Modal -->
+    <div class="modal fade" id="contactCandidateModal" tabindex="-1" aria-labelledby="contactCandidateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="contactCandidateModalLabel">Contact Candidate</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="contactForm">
+                        <div class="mb-3">
+                            <label for="emailTo" class="form-label">To</label>
+                            <input type="email" class="form-control" id="emailTo" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="emailSubject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="emailSubject" value="Your Application Status">
+                        </div>
+                        <div class="mb-3">
+                            <label for="emailBody" class="form-label">Message</label>
+                            <textarea class="form-control" id="emailBody" rows="6"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="sendEmailBtn">Send Email</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/analyze-resume.js"></script>
+</body>
+</html>
