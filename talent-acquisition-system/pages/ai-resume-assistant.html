@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Assistant - Talent Acquisition System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">Talent Acquisition</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../index.html">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="analyze-resume.html">
+                                <i class="bi bi-search me-2"></i>
+                                Analyze Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="upload-resume.html">
+                                <i class="bi bi-upload me-2"></i>
+                                Upload Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="job-description.html">
+                                <i class="bi bi-briefcase me-2"></i>
+                                Job Description
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="ai-resume-assistant.html">
+                                <i class="bi bi-robot me-2"></i>
+                                AI Resume Assistant
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">AI Resume Assistant</h1>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>Resume Analysis Chatbot</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chat-container mb-3" id="chatContainer">
+                                    <div class="system-message">
+                                        <p>Welcome to the AI Resume Assistant powered by Gemini. I can help you find the best candidates for your open positions by analyzing all available resumes. Please provide the position title and description of the candidate you're looking for.</p>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" id="userInput" class="form-control" placeholder="Type your message here...">
+                                    <button class="btn btn-primary" id="sendButton">
+                                        <i class="bi bi-send"></i> Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>How to Use</h5>
+                            </div>
+                            <div class="card-body">
+                                <ol>
+                                    <li>Make sure you have <strong>uploaded resumes</strong> using the Upload Resume page</li>
+                                    <li>Describe the position and candidate requirements (e.g., "I'm looking for a Frontend Developer with React experience")</li>
+                                    <li>The AI will analyze all available resumes in the system</li>
+                                    <li>Review the AI's recommendations based on resume match scores</li>
+                                    <li>Ask follow-up questions about specific candidates</li>
+                                    <li>Ask about eliminated candidates with "Show me the eliminated candidates"</li>
+                                </ol>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Important:</strong> Always start by describing a position first, then ask about candidates.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Example Prompts</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group">
+                                    <li class="list-group-item example-prompt">Find candidates for a Senior Frontend Developer with 5+ years of React experience</li>
+                                    <li class="list-group-item example-prompt">Why was candidate John Smith eliminated?</li>
+                                    <li class="list-group-item example-prompt">Compare the top 3 candidates for this position</li>
+                                    <li class="list-group-item example-prompt">What skills are missing from the recommended candidates?</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/ai-assistant.js"></script>
+</body>
+</html> 

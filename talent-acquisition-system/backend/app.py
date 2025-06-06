@@ -190,6 +190,103 @@ I want the response as per below structure
         logger.error(f"Unexpected error during resume analysis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/ai-assistant', methods=['POST'])
+def ai_assistant():
+    """Process user messages for the AI Resume Assistant chatbot using Gemini"""
+    logger.info("Received AI assistant request")
+    
+    data = request.json
+    if not data or 'message' not in data:
+        logger.error("No message provided in request")
+        return jsonify({'error': 'No message provided'}), 400
+    
+    user_message = data['message']
+    conversation_history = data.get('conversation_history', [])
+    resume_data = data.get('resume_data', [])
+    
+    logger.debug(f"User message: {user_message}")
+    logger.debug(f"Conversation history length: {len(conversation_history)}")
+    logger.debug(f"Resume data length: {len(resume_data)}")
+    
+    # Create prompt for Gemini
+    prompt = f"""You are an AI Resume Assistant for a talent acquisition system. Your task is to help recruiters find the best candidates for open positions by analyzing resumes.
+
+User message: {user_message}
+
+"""
+    
+    # Add conversation history if available
+    if conversation_history:
+        prompt += "\nConversation history:\n"
+        for entry in conversation_history:
+            prompt += f"- {entry['role']}: {entry['content']}\n"
+    
+    # Add resume data if available
+    if resume_data:
+        prompt += "\nAvailable resume data (in JSON format):\n"
+        prompt += json.dumps(resume_data, indent=2)
+    
+    prompt += """
+Based on the user's query, please:
+1. If the user is asking about finding candidates for a position, analyze the resume data and recommend the best matches
+2. If the user is asking about specific candidates, provide detailed information about them
+3. If the user is asking about why certain candidates weren't recommended, explain the reasoning
+4. If the user is comparing candidates, provide a detailed comparison
+
+Respond in a helpful, professional tone. Focus on providing specific, actionable insights rather than general advice.
+"""
+    
+    try:
+        logger.info("Sending request to Gemini API")
+        
+        # Call Gemini API
+        response = requests.post(
+            f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
+            json={
+                "contents": [{
+                    "role": "user",
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topK": 40,
+                    "topP": 0.95,
+                    "maxOutputTokens": 2048,
+                }
+            }
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Gemini API request failed: {response.text}")
+            return jsonify({
+                'error': f'Gemini API request failed with status {response.status_code}',
+                'details': response.text
+            }), 500
+        
+        response_data = response.json()
+        
+        # Extract the generated text
+        if 'candidates' in response_data and len(response_data['candidates']) > 0:
+            generated_text = response_data['candidates'][0]['content']['parts'][0]['text']
+            logger.info("Successfully extracted generated text from response")
+            
+            return jsonify({
+                'response': generated_text,
+                'success': True
+            })
+        else:
+            logger.error("Invalid response format from Gemini API")
+            return jsonify({
+                'error': 'Invalid response format from Gemini API',
+                'details': response_data
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Unexpected error during AI assistant processing: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/entity-types', methods=['GET'])
 def entity_types():
     """Return all possible entity types with explanations"""
