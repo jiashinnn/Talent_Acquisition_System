@@ -1,6 +1,9 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize charts
+    // Update dashboard stats with real data
+    updateDashboardStats();
+    
+    // Initialize charts with real data
     initScoreDistributionChart();
     initHiringByPositionChart();
     
@@ -15,12 +18,30 @@ document.addEventListener('DOMContentLoaded', function() {
 function initScoreDistributionChart() {
     const ctx = document.getElementById('scoreDistributionChart').getContext('2d');
     
-    // Sample data - in a real application, this would come from your backend
+    // Get real data from localStorage
+    const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
+    
+    // Count resumes by score range
+    let highScoreCount = 0;
+    let mediumScoreCount = 0;
+    let lowScoreCount = 0;
+    
+    analysisResults.forEach(result => {
+        const score = result.score || 0;
+        if (score >= 80) {
+            highScoreCount++;
+        } else if (score >= 50) {
+            mediumScoreCount++;
+        } else {
+            lowScoreCount++;
+        }
+    });
+    
     const data = {
         labels: ['High (80-100%)', 'Medium (50-79%)', 'Low (0-49%)'],
         datasets: [{
             label: 'Resume Count by Score',
-            data: [5, 12, 8],
+            data: [highScoreCount, mediumScoreCount, lowScoreCount],
             backgroundColor: [
                 'rgba(25, 135, 84, 0.7)',  // Green for high
                 'rgba(253, 126, 20, 0.7)', // Orange for medium
@@ -71,30 +92,73 @@ function initScoreDistributionChart() {
     });
 }
 
-// Initialize the Hiring by Position Chart
+// Initialize the Hiring by Position Chart with real data
 function initHiringByPositionChart() {
     const ctx = document.getElementById('hiringByPositionChart').getContext('2d');
     
-    // Sample data - in a real application, this would come from your backend
+    // Get real data from localStorage
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
+    
+    // Count candidates by position
+    const positionCounts = {};
+    
+    // First, initialize with job positions from jobs collection
+    jobs.forEach(job => {
+        positionCounts[job.title] = 0;
+    });
+    
+    // Then count resumes by position
+    resumes.forEach(resume => {
+        const position = resume.positionText || 'Unspecified';
+        if (positionCounts[position] === undefined) {
+            positionCounts[position] = 1;
+        } else {
+            positionCounts[position]++;
+        }
+    });
+    
+    // Convert to arrays for Chart.js
+    const labels = Object.keys(positionCounts);
+    const counts = Object.values(positionCounts);
+    
+    // Generate colors
+    const backgroundColors = [];
+    const borderColors = [];
+    
+    const colorPalette = [
+        'rgba(13, 110, 253, 0.7)', // blue
+        'rgba(102, 16, 242, 0.7)', // purple
+        'rgba(13, 202, 240, 0.7)', // cyan
+        'rgba(25, 135, 84, 0.7)',  // green
+        'rgba(255, 193, 7, 0.7)',  // yellow
+        'rgba(220, 53, 69, 0.7)',  // red
+        'rgba(108, 117, 125, 0.7)' // gray
+    ];
+    
+    const borderPalette = [
+        'rgba(13, 110, 253, 1)',
+        'rgba(102, 16, 242, 1)',
+        'rgba(13, 202, 240, 1)',
+        'rgba(25, 135, 84, 1)',
+        'rgba(255, 193, 7, 1)',
+        'rgba(220, 53, 69, 1)',
+        'rgba(108, 117, 125, 1)'
+    ];
+    
+    labels.forEach((_, index) => {
+        const colorIndex = index % colorPalette.length;
+        backgroundColors.push(colorPalette[colorIndex]);
+        borderColors.push(borderPalette[colorIndex]);
+    });
+    
     const data = {
-        labels: ['Software Engineer', 'Data Scientist', 'UX Designer', 'Product Manager', 'Marketing Specialist'],
+        labels: labels,
         datasets: [{
             label: 'Candidates by Position',
-            data: [10, 7, 5, 3, 6],
-            backgroundColor: [
-                'rgba(13, 110, 253, 0.7)',
-                'rgba(102, 16, 242, 0.7)',
-                'rgba(13, 202, 240, 0.7)',
-                'rgba(25, 135, 84, 0.7)',
-                'rgba(255, 193, 7, 0.7)'
-            ],
-            borderColor: [
-                'rgba(13, 110, 253, 1)',
-                'rgba(102, 16, 242, 1)',
-                'rgba(13, 202, 240, 1)',
-                'rgba(25, 135, 84, 1)',
-                'rgba(255, 193, 7, 1)'
-            ],
+            data: counts,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
             borderWidth: 1
         }]
     };
@@ -124,33 +188,19 @@ function initHiringByPositionChart() {
     });
 }
 
-// Function to update the dashboard stats (would be called after data changes)
-function updateDashboardStats(totalResumes, analyzedResumes, openPositions) {
+// Function to update the dashboard stats with real data
+function updateDashboardStats() {
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
+    const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
+    
+    const totalResumes = resumes.length;
+    const analyzedResumes = analysisResults.length;
+    const openPositions = jobs.length;
+    
     document.querySelector('.card.bg-primary .card-text').textContent = totalResumes;
     document.querySelector('.card.bg-success .card-text').textContent = analyzedResumes;
     document.querySelector('.card.bg-info .card-text').textContent = openPositions;
-}
-
-// Example function to add recent activity (would be called when new activities occur)
-function addRecentActivity(date, activity, details) {
-    const tableBody = document.querySelector('.table tbody');
-    
-    // Remove "No recent activity" row if it exists
-    const noActivityRow = tableBody.querySelector('tr td[colspan="3"]');
-    if (noActivityRow) {
-        tableBody.innerHTML = '';
-    }
-    
-    // Create new row
-    const newRow = document.createElement('tr');
-    newRow.innerHTML = `
-        <td>${date}</td>
-        <td>${activity}</td>
-        <td>${details}</td>
-    `;
-    
-    // Add to top of table
-    tableBody.insertBefore(newRow, tableBody.firstChild);
 }
 
 // Display recent uploads
@@ -159,10 +209,14 @@ function displayRecentUploads() {
     const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
     
     // Sort resumes by upload date (newest first)
-    resumes.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+    const sortedResumes = [...resumes].sort((a, b) => {
+        const dateA = a.uploadDate ? new Date(a.uploadDate) : new Date(0);
+        const dateB = b.uploadDate ? new Date(b.uploadDate) : new Date(0);
+        return dateB - dateA;
+    });
     
     // Take only the 5 most recent
-    const recentResumes = resumes.slice(0, 5);
+    const recentResumes = sortedResumes.slice(0, 5);
     
     if (recentResumes.length === 0) {
         recentUploadsContainer.innerHTML = '<p class="text-muted">No recent uploads found.</p>';
@@ -173,7 +227,7 @@ function displayRecentUploads() {
     
     recentResumes.forEach(resume => {
         // Format the date
-        const uploadDate = new Date(resume.uploadDate);
+        const uploadDate = resume.uploadDate ? new Date(resume.uploadDate) : new Date();
         const formattedDate = uploadDate.toLocaleDateString() + ' ' + uploadDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         // Determine badge class based on status
@@ -187,12 +241,12 @@ function displayRecentUploads() {
         html += `
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>${resume.candidateName}</strong>
+                    <strong>${resume.candidateName || 'Unnamed'}</strong>
                     <br>
-                    <small class="text-muted">${resume.fileName}</small>
+                    <small class="text-muted">${resume.fileName || 'No file'}</small>
                 </div>
                 <div class="text-end">
-                    <span class="badge ${badgeClass}">${resume.status}</span>
+                    <span class="badge ${badgeClass}">${resume.status || 'Pending'}</span>
                     <br>
                     <small class="text-muted">${formattedDate}</small>
                 </div>
@@ -220,7 +274,7 @@ function displayCandidateStatusSummary() {
     resumes.forEach(resume => {
         if (resume.status === 'Shortlisted') {
             shortlisted++;
-        } else if (resume.status === 'Pending') {
+        } else if (resume.status === 'Pending' || !resume.status) {
             pending++;
         } else if (resume.status === 'Spam') {
             spam++;

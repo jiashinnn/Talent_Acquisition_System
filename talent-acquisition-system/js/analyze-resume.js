@@ -198,8 +198,8 @@ function startAnalysis() {
         unprocessedResumes.forEach(resume => {
             message += `\n- ${resume.fileName}`;
         });
-        message += '\n\nPlease wait for OCR processing to complete before analyzing.';
-        showAlert(message, 'warning');
+        message += '\n\nPlease select only OCR processed resumes for analysis.';
+        showAlert(message, 'danger');
         return;
     }
     
@@ -207,17 +207,42 @@ function startAnalysis() {
     const progressModal = new bootstrap.Modal(document.getElementById('analysisProgressModal'));
     progressModal.show();
     
-    // Update progress text
-    const progressText = document.getElementById('progressText');
-    progressText.textContent = `0 of ${selectedResumes.length} resumes analyzed`;
+    // Log activity
+    addRecentActivity(`Started analysis of ${selectedResumes.length} resume(s)`);
     
-    // Update progress bar
-    const progressBar = document.querySelector('.progress-bar');
-    progressBar.style.width = '0%';
-    progressBar.setAttribute('aria-valuenow', 0);
-    
-    // Start analysis process
-    analyzeResumesWithPositions(selectedResumes, jobs, progressModal);
+    // Start analysis
+    analyzeResumesWithPositions(selectedResumes, jobs, progressModal)
+        .then(results => {
+            // Hide progress modal
+            progressModal.hide();
+            
+            if (results.length === 0) {
+                showAlert('No results were generated. Please try again.', 'danger');
+                return;
+            }
+            
+            // Save results
+            saveResults(results);
+            
+            // Display results
+            displayResults(results);
+            
+            // Show success message
+            showAlert(`Successfully analyzed ${results.length} resume(s)!`, 'success');
+            
+            // Log activity
+            addRecentActivity(`Completed analysis of ${results.length} resume(s)`);
+        })
+        .catch(error => {
+            // Hide progress modal
+            progressModal.hide();
+            
+            // Show error message
+            showAlert(`Analysis failed: ${error.message}`, 'danger');
+            
+            // Log error
+            addRecentActivity(`Analysis failed: ${error.message}`);
+        });
 }
 
 // Analyze resumes using their applied positions
@@ -287,6 +312,8 @@ async function analyzeResumesWithPositions(resumes, jobs, progressModal) {
     
     // Save results
     saveResults(results);
+    
+    return results;
 }
 
 // Analyze a single resume with backend API
@@ -846,4 +873,27 @@ function updateStartAnalysisButton() {
             startAnalysisBtn.disabled = true;
         }
     }
+}
+
+// Function to add recent activity to localStorage
+function addRecentActivity(activity) {
+    // Get existing activities
+    let activities = JSON.parse(localStorage.getItem('recentActivities')) || [];
+    
+    // Add new activity
+    const newActivity = {
+        date: new Date().toISOString(),
+        type: 'Resume Analysis',
+        details: activity
+    };
+    
+    activities.push(newActivity);
+    
+    // Limit to 50 most recent activities
+    if (activities.length > 50) {
+        activities = activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+    }
+    
+    // Save back to localStorage
+    localStorage.setItem('recentActivities', JSON.stringify(activities));
 }

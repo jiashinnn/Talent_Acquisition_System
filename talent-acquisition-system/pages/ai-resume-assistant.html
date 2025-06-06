@@ -175,6 +175,19 @@
                             </div>
                             <div class="card-body">
                                 <p class="lead">Chat with our AI assistant to find suitable candidates for your positions.</p>
+                                
+                                <!-- Add job position selector -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="jobPositionSelect" class="form-label">Select Job Position to Focus On:</label>
+                                        <select class="form-select" id="jobPositionSelect">
+                                            <option value="" selected>All Positions</option>
+                                            <!-- Will be populated from job descriptions -->
+                                        </select>
+                                        <div class="form-text">Selecting a position helps the AI assistant focus on relevant candidates.</div>
+                                    </div>
+                                </div>
+                                
                                 <p>Simply ask any question about positions or candidates - our Gemini LLM-powered assistant will understand and provide detailed responses.</p>
                                 <p class="text-success mb-4"><strong>New:</strong> Our AI assistant now uses Google's Gemini LLM for more natural, flexible conversations!</p>
                                 

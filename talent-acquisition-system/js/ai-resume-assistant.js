@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const userInput = document.getElementById('userInput');
     const sendButton = document.getElementById('sendButton');
     const clearButton = document.getElementById('clearButton');
+    const jobPositionSelect = document.getElementById('jobPositionSelect');
     
     // API endpoint
     const API_ENDPOINT = 'http://localhost:5000/api/ai-assistant';
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let pendingShortlistCandidates = []; // Store candidates pending shortlisting
     let awaitingConfirmation = false; // Flag to track if we're waiting for confirmation
     let hasShownShortlistHelp = false; // Flag to track if we've shown the shortlist help message
+    let selectedJobPosition = null; // Store selected job position
     
     // Add event listeners
     sendButton.addEventListener('click', handleUserMessage);
@@ -22,8 +24,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     clearButton.addEventListener('click', clearChat);
     
+    // Add job position selection listener
+    jobPositionSelect.addEventListener('change', function() {
+        const selectedValue = this.value;
+        const selectedText = this.options[this.selectedIndex].text;
+        
+        if (selectedValue) {
+            selectedJobPosition = {
+                id: selectedValue,
+                title: selectedText
+            };
+            
+            // Add system message about position change
+            addBotMessage(`🔍 I'll now focus on finding candidates for the "${selectedText}" position.`);
+            
+            // Update conversation context
+            conversationHistory.push({
+                role: 'system',
+                content: `User has selected job position: ${selectedText}`
+            });
+        } else {
+            selectedJobPosition = null;
+            addBotMessage("I'll now consider candidates for all positions.");
+        }
+    });
+    
+    // Load job positions
+    loadJobPositions();
+    
     // Initialize with welcome message
     addBotMessage("👋 Hello! I'm your AI Resume Assistant. I can help you find suitable candidates for your positions. Tell me what position you're looking for, or ask about specific candidates.");
+    
+    // Load job positions from localStorage
+    function loadJobPositions() {
+        const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
+        
+        // Clear existing options (except the first one)
+        while (jobPositionSelect.options.length > 1) {
+            jobPositionSelect.remove(1);
+        }
+        
+        // Add job positions to dropdown
+        jobs.forEach(job => {
+            const option = document.createElement('option');
+            option.value = job.id;
+            option.textContent = job.title;
+            jobPositionSelect.appendChild(option);
+        });
+    }
     
     // Handle user message
     function handleUserMessage() {
@@ -148,6 +196,29 @@ document.addEventListener('DOMContentLoaded', function() {
         addBotMessage(confirmationMessage);
     }
     
+    // Function to add recent activity to localStorage
+    function addRecentActivity(activity) {
+        // Get existing activities
+        let activities = JSON.parse(localStorage.getItem('recentActivities')) || [];
+        
+        // Add new activity
+        const newActivity = {
+            date: new Date().toISOString(),
+            type: 'AI Assistant',
+            details: activity
+        };
+        
+        activities.push(newActivity);
+        
+        // Limit to 50 most recent activities
+        if (activities.length > 50) {
+            activities = activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem('recentActivities', JSON.stringify(activities));
+    }
+    
     // Shortlist candidates
     function shortlistCandidates(candidates) {
         // Get resumes and analysis results
@@ -188,8 +259,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const message = shortlistedNames.length === 1
             ? `✅ Great! I've added ${shortlistedNames[0]} to your shortlist.`
             : `✅ Great! I've added the following candidates to your shortlist: ${shortlistedNames.join(', ')}.`;
-            
+        
         addBotMessage(`${message} You can view and manage all shortlisted candidates in the Candidate Management section.`);
+        
+        // Add to recent activities
+        const activityMessage = shortlistedNames.length === 1
+            ? `AI Assistant shortlisted candidate: ${shortlistedNames[0]}`
+            : `AI Assistant shortlisted ${shortlistedNames.length} candidates: ${shortlistedNames.join(', ')}`;
+        
+        addRecentActivity(activityMessage);
     }
     
     // Get resumes from localStorage with analysis results
@@ -199,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
         
         // Get all resumes that have completed OCR processing (not just analyzed ones)
-        const enhancedResumes = resumes.filter(resume => resume.ocrProcessed).map(resume => {
+        let enhancedResumes = resumes.filter(resume => resume.ocrProcessed).map(resume => {
             // Check if this resume has been analyzed
             const analysis = analysisResults.find(a => a.resumeId === resume.id);
             
@@ -215,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     email: resume.candidateEmail,
                     phone: resume.candidatePhone,
                     position: analysis.positionTitle,
+                    positionText: resume.positionText || analysis.positionTitle,
                     score: analysis.score,
                     status: resume.status,
                     extractedText: resume.extractedText,
@@ -236,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     email: resume.candidateEmail,
                     phone: resume.candidatePhone || 'Not provided',
                     position: resume.positionText || 'Not specified',
+                    positionText: resume.positionText || 'Not specified',
                     score: estimateMatchScore(resume.extractedText, skills),
                     status: resume.status,
                     extractedText: resume.extractedText,
@@ -249,6 +329,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             }
         });
+        
+        // Filter by selected job position if one is selected
+        if (selectedJobPosition) {
+            enhancedResumes = enhancedResumes.filter(resume => {
+                // Case insensitive position text matching
+                const resumePosition = (resume.positionText || '').toLowerCase();
+                const selectedPosition = selectedJobPosition.title.toLowerCase();
+                
+                // Check for exact match or if position contains the selected position
+                return resumePosition === selectedPosition || 
+                       resumePosition.includes(selectedPosition) ||
+                       selectedPosition.includes(resumePosition);
+            });
+        }
         
         return enhancedResumes;
     }
@@ -407,16 +501,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Call the AI Assistant API
     async function callAIAssistantAPI(message, resumeData) {
         try {
+            // Prepare request body
+            const requestBody = {
+                message: message,
+                conversation_history: conversationHistory,
+                resume_data: resumeData
+            };
+            
+            // Add selected job position if available
+            if (selectedJobPosition) {
+                requestBody.selected_position = selectedJobPosition;
+            }
+            
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    message: message,
-                    conversation_history: conversationHistory,
-                    resume_data: resumeData
-                })
+                body: JSON.stringify(requestBody)
             });
             
             if (!response.ok) {

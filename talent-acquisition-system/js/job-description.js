@@ -308,23 +308,21 @@ function searchJobs(query) {
 
 // Add recent activity to localStorage
 function addRecentActivity(activity) {
-    // Get existing activities or create new array
+    // Get existing activities
     let activities = JSON.parse(localStorage.getItem('recentActivities')) || [];
     
-    // Create activity object
-    const activityObj = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        activity: activity,
-        type: 'job'
+    // Add new activity
+    const newActivity = {
+        date: new Date().toISOString(),
+        type: 'Job Management',
+        details: activity
     };
     
-    // Add to beginning of array
-    activities.unshift(activityObj);
+    activities.push(newActivity);
     
-    // Keep only the most recent 50 activities
+    // Limit to 50 most recent activities
     if (activities.length > 50) {
-        activities = activities.slice(0, 50);
+        activities = activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
     }
     
     // Save back to localStorage

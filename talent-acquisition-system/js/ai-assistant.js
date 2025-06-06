@@ -1,14 +1,92 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const chatContainer = document.getElementById('chatContainer');
+    const chatMessages = document.getElementById('chatMessages');
     const userInput = document.getElementById('userInput');
     const sendButton = document.getElementById('sendButton');
-    const examplePrompts = document.querySelectorAll('.example-prompt');
+    const clearButton = document.getElementById('clearButton');
+    const jobPositionSelect = document.getElementById('jobPositionSelect');
     
     // API endpoint
     const API_ENDPOINT = 'http://localhost:5000/api/ai-assistant';
     
     // Store conversation history
     let conversationHistory = [];
+    
+    // Store selected job position
+    let selectedJobPosition = null;
+    
+    // Initialize
+    loadJobPositions();
+    addWelcomeMessage();
+    
+    // Add event listeners
+    sendButton.addEventListener('click', handleUserMessage);
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleUserMessage();
+        }
+    });
+    
+    clearButton.addEventListener('click', function() {
+        clearChat();
+    });
+    
+    jobPositionSelect.addEventListener('change', function() {
+        const selectedValue = this.value;
+        const selectedText = this.options[this.selectedIndex].text;
+        
+        if (selectedValue) {
+            selectedJobPosition = {
+                id: selectedValue,
+                title: selectedText
+            };
+            
+            // Add system message about position change
+            addMessageToChat('system', `Focus changed to position: ${selectedText}. The AI will prioritize candidates for this role.`);
+            
+            // Update conversation context
+            conversationContext.position = selectedText;
+            
+            // Re-analyze resumes with the new position
+            const resumes = getResumesFromLocalStorage();
+            if (resumes.length > 0) {
+                analyzeResumes(resumes);
+            }
+        } else {
+            selectedJobPosition = null;
+            addMessageToChat('system', 'Position filter cleared. The AI will consider all candidates for all positions.');
+        }
+    });
+    
+    // Load job positions from localStorage
+    function loadJobPositions() {
+        const jobs = JSON.parse(localStorage.getItem('jobs')) || [];
+        
+        // Clear existing options (except the first one)
+        while (jobPositionSelect.options.length > 1) {
+            jobPositionSelect.remove(1);
+        }
+        
+        // Add job positions to dropdown
+        jobs.forEach(job => {
+            const option = document.createElement('option');
+            option.value = job.id;
+            option.textContent = job.title;
+            jobPositionSelect.appendChild(option);
+        });
+    }
+    
+    // Add welcome message
+    function addWelcomeMessage() {
+        const welcomeMessage = "Welcome to the AI Resume Assistant powered by Gemini. I can help you find the best candidates for your open positions by analyzing all available resumes. You can select a specific job position from the dropdown above to focus on candidates for that role, or you can ask me about any position.";
+        addMessageToChat('system', welcomeMessage);
+    }
+    
+    // Clear chat
+    function clearChat() {
+        chatMessages.innerHTML = '';
+        conversationHistory = [];
+        addWelcomeMessage();
+    }
     
     // Get real resumes from localStorage
     function getResumesFromLocalStorage() {
@@ -31,6 +109,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return resume;
         });
+        
+        // If a job position is selected, filter resumes by position
+        if (selectedJobPosition) {
+            return enhancedResumes.filter(resume => {
+                // Match by position title (case insensitive)
+                if (resume.positionText && resume.positionText.toLowerCase() === selectedJobPosition.title.toLowerCase()) {
+                    return true;
+                }
+                
+                // Match by position ID if available
+                if (resume.positionId && resume.positionId === selectedJobPosition.id) {
+                    return true;
+                }
+                
+                return false;
+            });
+        }
         
         return enhancedResumes;
     }
@@ -89,22 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     ];
     
-    // Add event listeners
-    sendButton.addEventListener('click', handleUserMessage);
-    userInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            handleUserMessage();
-        }
-    });
-    
-    // Add click event to example prompts
-    examplePrompts.forEach(prompt => {
-        prompt.addEventListener('click', function() {
-            userInput.value = this.textContent;
-            userInput.focus();
-        });
-    });
-    
     // Handle user message
     function handleUserMessage() {
         const message = userInput.value.trim();
@@ -138,8 +217,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // If position is selected but no matching resumes, show a message
+        if (selectedJobPosition && resumeData.length === 0) {
+            removeTypingIndicator();
+            addMessageToChat('ai', `I don't see any resumes for the "${selectedJobPosition.title}" position. Please upload resumes for this position or select a different position.`);
+            return;
+        }
+        
+        // Include selected job position in the API call if available
+        let apiData = {
+            message: message,
+            conversation_history: conversationHistory,
+            resume_data: resumeData
+        };
+        
+        if (selectedJobPosition) {
+            apiData.selected_position = selectedJobPosition;
+        }
+        
         // Call AI Assistant API
-        callAIAssistantAPI(message, resumeData)
+        callAIAssistantAPI(apiData)
             .then(response => {
                 // Remove typing indicator and add AI response
                 removeTypingIndicator();
@@ -152,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Scroll to bottom of chat
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             })
             .catch(error => {
                 console.error('API call failed, using mock implementation:', error);
@@ -172,24 +269,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     // Scroll to bottom of chat
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
                 }, 1000);
             });
     }
     
     // Call the AI Assistant API
-    async function callAIAssistantAPI(message, resumeData) {
+    async function callAIAssistantAPI(apiData) {
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    message: message,
-                    conversation_history: conversationHistory,
-                    resume_data: resumeData
-                })
+                body: JSON.stringify(apiData)
             });
             
             if (!response.ok) {
@@ -499,35 +592,62 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add message to chat
     function addMessageToChat(role, content) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = role === 'user' ? 'user-message' : 'ai-message';
+        messageDiv.className = 'chat-message';
         
-        // Format message content with line breaks
-        const formattedContent = content.replace(/\n/g, '<br>');
-        messageDiv.innerHTML = `<p>${formattedContent}</p>`;
+        if (role === 'user') {
+            messageDiv.classList.add('user-message');
+            
+            // Format message content with line breaks
+            const formattedContent = content.replace(/\n/g, '<br>');
+            messageDiv.innerHTML = `
+                <div class="message-content">${formattedContent}</div>
+            `;
+        } else if (role === 'ai') {
+            messageDiv.classList.add('bot-message');
+            
+            // Format message content with line breaks
+            const formattedContent = content.replace(/\n/g, '<br>');
+            messageDiv.innerHTML = `
+                <div class="avatar"><i class="bi bi-robot"></i></div>
+                <div class="message-content">${formattedContent}</div>
+            `;
+        } else if (role === 'system') {
+            messageDiv.classList.add('bot-message');
+            
+            // Format message content with line breaks
+            const formattedContent = content.replace(/\n/g, '<br>');
+            messageDiv.innerHTML = `
+                <div class="avatar"><i class="bi bi-info-circle"></i></div>
+                <div class="message-content"><em>${formattedContent}</em></div>
+            `;
+        }
         
-        chatContainer.appendChild(messageDiv);
+        chatMessages.appendChild(messageDiv);
         
         // Scroll to bottom of chat
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
     // Add typing indicator
     function addTypingIndicator() {
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'ai-message typing-indicator';
+        typingDiv.className = 'chat-message bot-message typing-indicator';
         typingDiv.innerHTML = `
-            <div class="typing-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="avatar"><i class="bi bi-robot"></i></div>
+            <div class="message-content">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
         `;
         typingDiv.id = 'typingIndicator';
         
-        chatContainer.appendChild(typingDiv);
+        chatMessages.appendChild(typingDiv);
         
         // Scroll to bottom of chat
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
     // Remove typing indicator

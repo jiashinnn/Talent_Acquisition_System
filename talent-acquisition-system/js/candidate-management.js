@@ -380,47 +380,67 @@ document.addEventListener('DOMContentLoaded', function() {
         contactModal.hide();
     }
     
+    // Function to add recent activity to localStorage
+    function addRecentActivity(activity) {
+        // Get existing activities
+        let activities = JSON.parse(localStorage.getItem('recentActivities')) || [];
+        
+        // Add new activity
+        const newActivity = {
+            date: new Date().toISOString(),
+            type: 'Candidate Management',
+            details: activity
+        };
+        
+        activities.push(newActivity);
+        
+        // Limit to 50 most recent activities
+        if (activities.length > 50) {
+            activities = activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem('recentActivities', JSON.stringify(activities));
+    }
+    
     // Change candidate status
     function changeStatus(resumeId, newStatus) {
-        // Update in resumes
+        // Get resumes and analysis results
         const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
-        const resumeIndex = resumes.findIndex(r => r.id === resumeId);
+        const analysisResults = JSON.parse(localStorage.getItem('analysisResults')) || [];
         
+        // Update status in resumes
+        const resumeIndex = resumes.findIndex(r => r.id === resumeId);
         if (resumeIndex !== -1) {
+            const oldStatus = resumes[resumeIndex].status;
             resumes[resumeIndex].status = newStatus;
             localStorage.setItem('resumes', JSON.stringify(resumes));
-        }
-        
-        // Update in analysis results
-        const results = JSON.parse(localStorage.getItem('analysisResults')) || [];
-        const resultIndex = results.findIndex(r => r.resumeId === resumeId);
-        
-        if (resultIndex !== -1) {
-            results[resultIndex].status = newStatus;
-            localStorage.setItem('analysisResults', JSON.stringify(results));
-        }
-        
-        // Update current candidate
-        if (currentCandidate && currentCandidate.resumeId === resumeId) {
-            currentCandidate.status = newStatus;
             
-            // Update status badge in modal
-            const statusBadge = candidateDetailContent.querySelector('.badge');
-            if (statusBadge) {
-                statusBadge.className = `badge ${getStatusBadgeClass(newStatus)}`;
-                statusBadge.textContent = newStatus;
+            // Update status in analysis results
+            const analysisIndex = analysisResults.findIndex(a => a.resumeId === resumeId);
+            if (analysisIndex !== -1) {
+                analysisResults[analysisIndex].status = newStatus;
+                localStorage.setItem('analysisResults', JSON.stringify(analysisResults));
             }
+            
+            // Update current candidate if it's the one being viewed
+            if (currentCandidate && currentCandidate.resumeId === resumeId) {
+                currentCandidate.status = newStatus;
+                showCandidateDetails(currentCandidate);
+            }
+            
+            // Show success message
+            showAlert(`Candidate status changed from ${oldStatus || 'Pending'} to ${newStatus}`, 'success');
+            
+            // Add to recent activities
+            const candidateName = resumes[resumeIndex].candidateName || 'Unknown candidate';
+            addRecentActivity(`Changed status of ${candidateName} from ${oldStatus || 'Pending'} to ${newStatus}`);
+            
+            // Reload candidates
+            loadCandidates();
+        } else {
+            showAlert('Error: Resume not found', 'danger');
         }
-        
-        // Reload candidates
-        loadCandidates();
-        
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('candidateDetailModal'));
-        modal.hide();
-        
-        // Show success message
-        showAlert(`Status updated to "${newStatus}" successfully!`, 'success');
     }
     
     // Helper function to get score bar class

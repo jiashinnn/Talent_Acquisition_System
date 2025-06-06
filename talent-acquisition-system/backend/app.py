@@ -203,10 +203,13 @@ def ai_assistant():
     user_message = data['message']
     conversation_history = data.get('conversation_history', [])
     resume_data = data.get('resume_data', [])
+    selected_position = data.get('selected_position', None)
     
     logger.debug(f"User message: {user_message}")
     logger.debug(f"Conversation history length: {len(conversation_history)}")
     logger.debug(f"Resume data length: {len(resume_data)}")
+    if selected_position:
+        logger.debug(f"Selected position: {selected_position['title']} (ID: {selected_position['id']})")
     
     # Create prompt for Gemini
     prompt = f"""You are an AI Resume Assistant for a talent acquisition system. Your task is to help recruiters find the best candidates for open positions by analyzing resumes.
@@ -214,6 +217,11 @@ def ai_assistant():
 User message: {user_message}
 
 """
+    
+    # Add selected position if available
+    if selected_position:
+        prompt += f"\nThe user has selected a specific job position to focus on: {selected_position['title']}\n"
+        prompt += "Please prioritize candidates that match this position in your responses.\n"
     
     # Add conversation history if available
     if conversation_history:
@@ -232,6 +240,7 @@ Based on the user's query, please:
 2. If the user is asking about specific candidates, provide detailed information about them
 3. If the user is asking about why certain candidates weren't recommended, explain the reasoning
 4. If the user is comparing candidates, provide a detailed comparison
+5. If a specific job position is selected, focus your recommendations on candidates for that position
 
 Respond in a helpful, professional tone. Focus on providing specific, actionable insights rather than general advice.
 """

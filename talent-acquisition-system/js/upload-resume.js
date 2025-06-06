@@ -1087,21 +1087,24 @@ function showAlert(message, type, duration = 3000) {
 }
 
 function addRecentActivity(activity) {
+    // Get existing activities
     let activities = JSON.parse(localStorage.getItem('recentActivities')) || [];
     
-    const activityObj = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        activity: activity,
-        type: 'resume'
+    // Add new activity
+    const newActivity = {
+        date: new Date().toISOString(),
+        type: 'Resume Management',
+        details: activity
     };
     
-    activities.unshift(activityObj);
+    activities.push(newActivity);
     
+    // Limit to 50 most recent activities
     if (activities.length > 50) {
-        activities = activities.slice(0, 50);
+        activities = activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
     }
     
+    // Save back to localStorage
     localStorage.setItem('recentActivities', JSON.stringify(activities));
 }
 
