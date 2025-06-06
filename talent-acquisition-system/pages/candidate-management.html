@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Management - Talent Acquisition System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">Talent Acquisition</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../index.html">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="analyze-resume.html">
+                                <i class="bi bi-search me-2"></i>
+                                Analyze Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="upload-resume.html">
+                                <i class="bi bi-upload me-2"></i>
+                                Upload Resume
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="job-description.html">
+                                <i class="bi bi-briefcase me-2"></i>
+                                Job Description
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="ai-resume-assistant.html">
+                                <i class="bi bi-robot me-2"></i>
+                                AI Resume Assistant
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="candidate-management.html">
+                                <i class="bi bi-people me-2"></i>
+                                Candidate Management
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Candidate Management</h1>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Filter Candidates</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="all" selected>All Statuses</option>
+                                    <option value="Shortlisted">Shortlisted</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Spam">Spam</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Position</label>
+                                <select class="form-select" id="positionFilter">
+                                    <option value="all" selected>All Positions</option>
+                                    <!-- Will be populated from job descriptions -->
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Score Range</label>
+                                <select class="form-select" id="scoreFilter">
+                                    <option value="all" selected>All Scores</option>
+                                    <option value="high">High (80-100%)</option>
+                                    <option value="medium">Medium (50-79%)</option>
+                                    <option value="low">Low (0-49%)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Sort By</label>
+                                <select class="form-select" id="sortBy">
+                                    <option value="score_desc" selected>Score (High to Low)</option>
+                                    <option value="score_asc">Score (Low to High)</option>
+                                    <option value="name_asc">Name (A to Z)</option>
+                                    <option value="name_desc">Name (Z to A)</option>
+                                    <option value="date_desc">Date (Newest First)</option>
+                                    <option value="date_asc">Date (Oldest First)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Candidate Tabs -->
+                <ul class="nav nav-tabs mb-4" id="candidateTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="shortlisted-tab" data-bs-toggle="tab" data-bs-target="#shortlisted" type="button" role="tab">
+                            Shortlisted <span class="badge bg-success" id="shortlistedCount">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                            Pending <span class="badge bg-warning" id="pendingCount">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="spam-tab" data-bs-toggle="tab" data-bs-target="#spam" type="button" role="tab">
+                            Spam <span class="badge bg-secondary" id="spamCount">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="candidateTabsContent">
+                    <!-- Shortlisted Candidates -->
+                    <div class="tab-pane fade show active" id="shortlisted" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="shortlistedTable">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Position</th>
+                                        <th>Score</th>
+                                        <th>Contact</th>
+                                        <th>Analysis Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">No shortlisted candidates found.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pending Candidates -->
+                    <div class="tab-pane fade" id="pending" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="pendingTable">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Position</th>
+                                        <th>Score</th>
+                                        <th>Contact</th>
+                                        <th>Analysis Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">No pending candidates found.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Spam Candidates -->
+                    <div class="tab-pane fade" id="spam" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="spamTable">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Position</th>
+                                        <th>Score</th>
+                                        <th>Contact</th>
+                                        <th>Analysis Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">No spam candidates found.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Candidate Detail Modal -->
+    <div class="modal fade" id="candidateDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="candidateDetailModalLabel">Candidate Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="candidateDetailContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <div class="dropdown me-auto">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="changeStatusDropdown" data-bs-toggle="dropdown">
+                            Change Status
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item change-candidate-status" data-status="Shortlisted" href="#">Shortlisted</a></li>
+                            <li><a class="dropdown-item change-candidate-status" data-status="Pending" href="#">Pending</a></li>
+                            <li><a class="dropdown-item change-candidate-status" data-status="Spam" href="#">Spam</a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="contactCandidateBtn">Contact Candidate</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Candidate Modal -->
+    <div class="modal fade" id="contactCandidateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Contact Candidate</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="contactForm">
+                        <div class="mb-3">
+                            <label for="contactEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="contactEmail" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="contactPhone" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactSubject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="contactSubject" value="Your Application Status">
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactMessage" class="form-label">Message</label>
+                            <textarea class="form-control" id="contactMessage" rows="6"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="sendEmailBtn">Send Email</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/candidate-management.js"></script>
+</body>
+</html> 

@@ -383,14 +383,13 @@ function extractPercentage(percentStr) {
     
     // Determine status based on score
 function determineStatus(score) {
-    if (score >= 80) {
-        return 'Under Review';
-    } else if (score >= 50) {
+    if (score >= 70) {
+        return 'Shortlisted';
+    } else if (score >= 30) {
         return 'Pending';
-    } else if (score < 30) {
-        return 'Spam';
+    } else {
+        return 'Spam'; // For scores below 30, mark as potential spam
     }
-    return 'Pending';
 }
 
 // Create fallback result when analysis fails
@@ -507,9 +506,7 @@ function displayResults(results) {
                         Status
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item change-status" data-status="Under Review" href="#">Under Review</a></li>
-                        <li><a class="dropdown-item change-status" data-status="Approved" href="#">Approved</a></li>
-                        <li><a class="dropdown-item change-status" data-status="Rejected" href="#">Rejected</a></li>
+                        <li><a class="dropdown-item change-status" data-status="Shortlisted" href="#">Shortlisted</a></li>
                         <li><a class="dropdown-item change-status" data-status="Pending" href="#">Pending</a></li>
                         <li><a class="dropdown-item change-status" data-status="Spam" href="#">Spam</a></li>
                     </ul>
@@ -751,16 +748,21 @@ function exportResults() {
 // Helper function to get status badge class
 function getStatusBadgeClass(status) {
     switch (status) {
+        case 'Shortlisted':
+            return 'bg-success';
+        case 'Pending':
+            return 'bg-warning';
+        case 'Spam':
+            return 'bg-secondary';
+        // Keep these for backward compatibility
         case 'Approved':
             return 'bg-success';
         case 'Rejected':
             return 'bg-danger';
         case 'Under Review':
             return 'bg-info';
-        case 'Spam':
-            return 'bg-secondary';
         default:
-            return 'bg-warning'; // Pending
+            return 'bg-warning'; // Default to warning
     }
 }
 

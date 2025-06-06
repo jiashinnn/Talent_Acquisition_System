@@ -3,6 +3,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize charts
     initScoreDistributionChart();
     initHiringByPositionChart();
+    
+    // Display recent uploads
+    displayRecentUploads();
+    
+    // Display candidate status summary
+    displayCandidateStatusSummary();
 });
 
 // Initialize the Score Distribution Chart
@@ -145,4 +151,84 @@ function addRecentActivity(date, activity, details) {
     
     // Add to top of table
     tableBody.insertBefore(newRow, tableBody.firstChild);
+}
+
+// Display recent uploads
+function displayRecentUploads() {
+    const recentUploadsContainer = document.getElementById('recentUploadsContainer');
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    
+    // Sort resumes by upload date (newest first)
+    resumes.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+    
+    // Take only the 5 most recent
+    const recentResumes = resumes.slice(0, 5);
+    
+    if (recentResumes.length === 0) {
+        recentUploadsContainer.innerHTML = '<p class="text-muted">No recent uploads found.</p>';
+        return;
+    }
+    
+    let html = '<ul class="list-group">';
+    
+    recentResumes.forEach(resume => {
+        // Format the date
+        const uploadDate = new Date(resume.uploadDate);
+        const formattedDate = uploadDate.toLocaleDateString() + ' ' + uploadDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Determine badge class based on status
+        let badgeClass = 'bg-warning';
+        if (resume.status === 'Shortlisted') {
+            badgeClass = 'bg-success';
+        } else if (resume.status === 'Spam') {
+            badgeClass = 'bg-secondary';
+        }
+        
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${resume.candidateName}</strong>
+                    <br>
+                    <small class="text-muted">${resume.fileName}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge ${badgeClass}">${resume.status}</span>
+                    <br>
+                    <small class="text-muted">${formattedDate}</small>
+                </div>
+            </li>
+        `;
+    });
+    
+    html += '</ul>';
+    recentUploadsContainer.innerHTML = html;
+}
+
+// Display candidate status summary
+function displayCandidateStatusSummary() {
+    const shortlistedCount = document.getElementById('shortlistedCount');
+    const pendingCount = document.getElementById('pendingCount');
+    const spamCount = document.getElementById('spamCount');
+    
+    const resumes = JSON.parse(localStorage.getItem('resumes')) || [];
+    
+    // Count resumes by status
+    let shortlisted = 0;
+    let pending = 0;
+    let spam = 0;
+    
+    resumes.forEach(resume => {
+        if (resume.status === 'Shortlisted') {
+            shortlisted++;
+        } else if (resume.status === 'Pending') {
+            pending++;
+        } else if (resume.status === 'Spam') {
+            spam++;
+        }
+    });
+    
+    // Update the counters
+    shortlistedCount.textContent = shortlisted;
+    pendingCount.textContent = pending;
+    spamCount.textContent = spam;
 }

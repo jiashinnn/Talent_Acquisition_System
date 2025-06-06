@@ -48,6 +48,12 @@
                                 AI Resume Assistant
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="pages/candidate-management.html">
+                                <i class="bi bi-people me-2"></i>
+                                Candidate Management
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
@@ -131,6 +137,59 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Recent Uploads</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recentUploadsContainer">
+                                    <p class="text-muted">No recent uploads found.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Candidate Status Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card bg-success text-white">
+                                            <div class="card-body text-center">
+                                                <h3 id="shortlistedCount">0</h3>
+                                                <p class="mb-0">Shortlisted</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card bg-warning text-dark">
+                                            <div class="card-body text-center">
+                                                <h3 id="pendingCount">0</h3>
+                                                <p class="mb-0">Pending</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card bg-secondary text-white">
+                                            <div class="card-body text-center">
+                                                <h3 id="spamCount">0</h3>
+                                                <p class="mb-0">Spam</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <a href="pages/candidate-management.html" class="btn btn-primary">Manage Candidates</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

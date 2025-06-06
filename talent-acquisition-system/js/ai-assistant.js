@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const examplePrompts = document.querySelectorAll('.example-prompt');
     
     // API endpoint
-    const API_ENDPOINT = '../backend/api/ai-assistant';
+    const API_ENDPOINT = 'http://localhost:5000/api/ai-assistant';
     
     // Store conversation history
     let conversationHistory = [];

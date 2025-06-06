@@ -558,16 +558,20 @@ function addResumeToTable(resume) {
     row.setAttribute('data-resume-id', resume.id);
     
     let statusBadgeClass = 'bg-warning';
-    if (resume.status === 'Approved') {
+    if (resume.status === 'Shortlisted') {
         statusBadgeClass = 'bg-success';
-    } else if (resume.status === 'Rejected') {
-        statusBadgeClass = 'bg-danger';
-    } else if (resume.status === 'Under Review') {
-        statusBadgeClass = 'bg-info';
+    } else if (resume.status === 'Pending') {
+        statusBadgeClass = 'bg-warning';
     } else if (resume.status === 'Spam') {
         statusBadgeClass = 'bg-secondary';
     } else if (resume.status === 'Processing') {
         statusBadgeClass = 'bg-primary';
+    } else if (resume.status === 'Approved') { // For backward compatibility
+        statusBadgeClass = 'bg-success';
+    } else if (resume.status === 'Rejected') { // For backward compatibility
+        statusBadgeClass = 'bg-danger';
+    } else if (resume.status === 'Under Review') { // For backward compatibility
+        statusBadgeClass = 'bg-info';
     }
     
     row.innerHTML = `
@@ -596,16 +600,20 @@ function updateResumeRow(resume) {
         const statusBadge = row.querySelector('td:nth-child(4) .badge');
         let statusBadgeClass = 'bg-warning';
         
-        if (resume.status === 'Approved') {
+        if (resume.status === 'Shortlisted') {
             statusBadgeClass = 'bg-success';
-        } else if (resume.status === 'Rejected') {
-            statusBadgeClass = 'bg-danger';
-        } else if (resume.status === 'Under Review') {
-            statusBadgeClass = 'bg-info';
+        } else if (resume.status === 'Pending') {
+            statusBadgeClass = 'bg-warning';
         } else if (resume.status === 'Spam') {
             statusBadgeClass = 'bg-secondary';
         } else if (resume.status === 'Processing') {
             statusBadgeClass = 'bg-primary';
+        } else if (resume.status === 'Approved') { // For backward compatibility
+            statusBadgeClass = 'bg-success';
+        } else if (resume.status === 'Rejected') { // For backward compatibility
+            statusBadgeClass = 'bg-danger';
+        } else if (resume.status === 'Under Review') { // For backward compatibility
+            statusBadgeClass = 'bg-info';
         }
         
         statusBadge.className = `badge ${statusBadgeClass}`;
@@ -836,16 +844,21 @@ function searchResumes(query) {
 
 function getStatusBadgeClass(status) {
     switch (status) {
+        case 'Shortlisted':
+            return 'bg-success';
+        case 'Pending':
+            return 'bg-warning';
+        case 'Spam':
+            return 'bg-secondary';
+        case 'Processing':
+            return 'bg-primary';
+        // Keep these for backward compatibility
         case 'Approved':
             return 'bg-success';
         case 'Rejected':
             return 'bg-danger';
         case 'Under Review':
             return 'bg-info';
-        case 'Spam':
-            return 'bg-secondary';
-        case 'Processing':
-            return 'bg-primary';
         default:
             return 'bg-warning';
     }
